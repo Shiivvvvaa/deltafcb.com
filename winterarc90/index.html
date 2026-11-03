@@ -439,7 +439,7 @@ html[data-perf="0"] .floor { filter: none; }
 <script>
 // WinterArc90 scoring — exactly the SCORING LOGIC block in the "WinterArc 90 Tracker" sheet.
 // Shared by the n8n "Score & Rank" Code node and the dashboard.
-//   Muscle     = MIN(25, Relative Muscle Gain % ÷ 6% × 25)
+//   Muscle     = MIN(25, Relative Muscle Gain % ÷ 10% × 25)
 //   Body fat   = (Day 1 BF % − Day 90 BF %) × 2.5, max 25 at a 10.0 pp drop
 //   Attendance = MIN(25, Days Attended ÷ 80 × 25)
 //   Visual     = judges' manual score, 0–25
@@ -485,7 +485,7 @@ function scoreAll(rows, nowIso) {
     const sheet = k => k in r ? (num(r[k]) ?? 0) : null;
     const days = num(r['Days Attended']), vis = num(r['Visual Transformation Score /25']);
     const mPct = iM > 0 && cM != null ? (cM - iM) / iM * 100 : null;
-    const mPts = sheet('Muscle Score /25') ?? (mPct == null ? 0 : clamp(mPct / 6 * 25, 0, 25));
+    const mPts = sheet('Muscle Score /25') ?? (mPct == null ? 0 : clamp(mPct / 10 * 25, 0, 25));
     const fDrop = iF != null && cF != null ? iF - cF : null;
     const fPts = sheet('Fat Score /25') ?? (fDrop == null ? 0 : clamp(fDrop * 2.5, 0, 25));
     const aPts = sheet('Attendance Score /25') ?? (days == null ? 0 : clamp(days / 80 * 25, 0, 25));
@@ -734,7 +734,7 @@ function detailHtml(r, avg) {
   const mPct = r['Muscle Change %'], fd = r['Body Fat Drop (pp)'], days = r.attendanceDays;
   const noRead = '<span class="calc">Waiting for the Day 90 reading.</span>';
   const body = [
-    r.initialMuscle == null || r.currentMuscle == null ? noRead : `<span class="calc"><code>${fmt(r.initialMuscle, 1)} → ${fmt(r.currentMuscle, 1)} kg</code> = ${mPct >= 0 ? '+' : ''}${fmt(mPct)}% ÷ 6% × 25</span>${r['Muscle Pts'] >= 25 ? '<span class="hint ok">Maxed at 6%+</span>' : mPct < 0 ? '<span class="hint">Below Day 0, so 0 pts</span>' : `<span class="hint">+${fmt(r.initialMuscle * 1.06 - r.currentMuscle, 1)} kg more for the full 25</span>`}`,
+    r.initialMuscle == null || r.currentMuscle == null ? noRead : `<span class="calc"><code>${fmt(r.initialMuscle, 1)} → ${fmt(r.currentMuscle, 1)} kg</code> = ${mPct >= 0 ? '+' : ''}${fmt(mPct)}% ÷ 10% × 25</span>${r['Muscle Pts'] >= 25 ? '<span class="hint ok">Maxed at 10%+</span>' : mPct < 0 ? '<span class="hint">Below Day 0, so 0 pts</span>' : `<span class="hint">+${fmt(r.initialMuscle * 1.1 - r.currentMuscle, 1)} kg more for the full 25</span>`}`,
     r.initialBodyFat == null || r.currentBodyFat == null ? noRead : `<span class="calc"><code>${fmt(r.initialBodyFat, 1)}% − ${fmt(r.currentBodyFat, 1)}%</code> = ${fmt(fd)} pp × 2.5</span>${r['Body Fat Pts'] >= 25 ? '<span class="hint ok">Maxed at 10+ pp</span>' : fd < 0 ? '<span class="hint">Body fat went up, so 0 pts</span>' : `<span class="hint">${fmt(10 - fd, 1)} pp more for the full 25</span>`}`,
     days == null ? '<span class="calc">No days recorded yet.</span>' : `<span class="calc"><code>${fmt(days, 0)} ÷ 80 × 25</code></span>${r['Attendance Pts'] >= 25 ? '<span class="hint ok">Full 25 locked in</span>' : `<span class="hint">${80 - days} more days for the full 25</span>`}`,
     r.visualScore == null ? '<span class="calc">Judged on Day 1 vs Day 90 photos, 0–25.</span><span class="hint">Not judged yet</span>' : '<span class="calc">Judges\' score from Day 1 vs Day 90 photos.</span>',
@@ -825,7 +825,7 @@ function rulesView() {
   ];
   // Band points come from scoreAll itself, so this table can never drift from the scoring rules.
   const bands = {
-    m: [[0, '0%'], [1, '1%'], [2, '2%'], [3, '3%'], [4, '4%'], [5, '5%'], [6, '6%+']],
+    m: [[0, '0%'], [2, '2%'], [4, '4%'], [6, '6%'], [8, '8%'], [10, '10%+']],
     f: [[0, '0 pp'], [1, '1 pp'], [2, '2 pp'], [3, '3 pp'], [4, '4 pp'], [5, '5 pp'], [6, '6 pp'], [7, '7 pp'], [8, '8 pp'], [9, '9 pp'], [10, '10+ pp']],
     a: [[16, '16 d'], [32, '32 d'], [48, '48 d'], [64, '64 d'], [72, '72 d'], [80, '80+ d']],
     v: [[0, '0'], [5, '5'], [10, '10'], [15, '15'], [20, '20'], [25, '25']],
@@ -842,7 +842,7 @@ function rulesView() {
     <div class="donut-box"><span class="eyebrow">Your score</span><div class="donut"><svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="90" stroke="var(--paper-2)"/>${METRICS.map((m, i) => `<circle id="dn-${i}" cx="110" cy="110" r="90" stroke="${m.c}" stroke-dasharray="0 566"/>`).join('')}</svg><div class="center"><span class="num" id="calcTotal">0</span><small>out of 100</small></div></div><div class="verdict" id="verdict"></div></div>
   </div></section>
   <section class="wrap rules">
-    ${rule('m', 'Muscle mass', 'var(--m1)', 'MIN(25, Relative Muscle Gain % ÷ 6% × 25)', 'A 6% or greater relative increase earns 25/25. Example: +1 kg on 30 kg starting muscle = 3.33% gain = 13.89 points.')}
+    ${rule('m', 'Muscle mass', 'var(--m1)', 'MIN(25, Relative Muscle Gain % ÷ 10% × 25)', 'A 10% or greater relative increase earns 25/25. Example: +1 kg on 30 kg starting muscle = 3.33% gain = 8.33 points.')}
     ${rule('f', 'Body-fat reduction', 'var(--m2)', 'Day 1 body-fat % − Day 90 body-fat % → 2.5 pts per percentage point', 'Capped at 25 points at a 10.0 percentage-point reduction. Example: 30.0% − 27.8% = 2.2 percentage points = 5.5 points.')}
     ${rule('a', 'Attendance', 'var(--m3)', 'MIN(25, Days Attended ÷ 80 × 25)', '80 days or more earns the full 25; below 80 days, points scale linearly. Example: 64 days = 20 points; 80 or 82 days = 25 points.')}
     ${rule('v', 'Visual transformation', 'var(--m4)', 'Judges\' score, entered manually 0–25', 'Scored with consistent criteria on comparable Day 1 and Day 90 photos.')}
